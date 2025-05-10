@@ -355,8 +355,10 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 	const bool prefiltered,
 	float* out_color,
 	float* invdepth,
+	float* out_opacity,
 	bool antialiasing,
 	int* radii,
+	int* n_touched,
 	bool debug)
 {
 	const float focal_y = height / (2.0f * tan_fovy);
@@ -490,7 +492,9 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		geomState.depths,
-		invdepth), debug)
+		invdepth,
+		out_opacity,
+		n_touched), debug)
 
 	CHECK_CUDA(cudaMemcpy(imgState.pixel_colors, out_color, sizeof(float) * width * height * NUM_CHANNELS_3DGS, cudaMemcpyDeviceToDevice), debug);
 	CHECK_CUDA(cudaMemcpy(imgState.pixel_invDepths, invdepth, sizeof(float) * width * height, cudaMemcpyDeviceToDevice), debug);
@@ -514,6 +518,7 @@ void CudaRasterizer::Rasterizer::backward(
 	const float* cov3D_precomp,
 	const float* viewmatrix,
 	const float* projmatrix,
+	const float* projmatrix_raw,
 	const float* campos,
 	const float tan_fovx, float tan_fovy,
 	const int* radii,
@@ -534,6 +539,7 @@ void CudaRasterizer::Rasterizer::backward(
 	float* dL_dsh,
 	float* dL_dscale,
 	float* dL_drot,
+	float* dL_dtau,
 	bool antialiasing,
 	bool debug)
 {
@@ -557,6 +563,7 @@ void CudaRasterizer::Rasterizer::backward(
 	// opacity and RGB of Gaussians from per-pixel loss gradients.
 	// If we were given precomputed colors and not SHs, use them.
 	const float* color_ptr = (colors_precomp != nullptr) ? colors_precomp : geomState.rgb;
+
 	CHECK_CUDA(BACKWARD::render(
 		tile_grid,
 		block,
@@ -603,6 +610,7 @@ void CudaRasterizer::Rasterizer::backward(
 		cov3D_ptr,
 		viewmatrix,
 		projmatrix,
+		projmatrix_raw,
 		focal_x, focal_y,
 		tan_fovx, tan_fovy,
 		(glm::vec3*)campos,
@@ -612,10 +620,12 @@ void CudaRasterizer::Rasterizer::backward(
 		dL_dopacity,
 		(glm::vec3*)dL_dmean3D,
 		dL_dcolor,
+		dL_dinvdepth,
 		dL_dcov3D,
 		dL_ddc,
 		dL_dsh,
 		(glm::vec3*)dL_dscale,
 		(glm::vec4*)dL_drot,
+		dL_dtau,
 		antialiasing), debug)
 }

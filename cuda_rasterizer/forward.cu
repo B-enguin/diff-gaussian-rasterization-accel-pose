@@ -11,6 +11,8 @@
 
 #include "forward.h"
 #include "auxiliary.h"
+#include "helper_math.h"
+#include "math.h"
 #include <cuda.h>
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
@@ -109,6 +111,11 @@ __device__ float3 computeCov2D(const float3& mean, float focal_x, float focal_y,
 		cov3D[2], cov3D[4], cov3D[5]);
 
 	glm::mat3 cov = glm::transpose(T) * glm::transpose(Vrk) * T;
+
+	// Apply low-pass filter: every Gaussian should be at least
+	// one pixel wide/high. Discard 3rd row and column.
+	cov[0][0] += 0.3f;
+	cov[1][1] += 0.3f;
 
 	return { float(cov[0][0]), float(cov[0][1]), float(cov[1][1]) };
 }
@@ -295,7 +302,9 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	const float* __restrict__ depths,
-	float* __restrict__ invdepth)
+	float* __restrict__ invdepth,
+	float* __restrict__ out_opacity,
+	int * __restrict__ n_touched)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -404,6 +413,10 @@ renderCUDA(
 
 			expected_invdepth += (1.f / depths[collected_id[j]]) * alpha * T;
 
+			if (test_T > 0.5f) {
+				atomicAdd(&(n_touched[collected_id[j]]), 1);
+			}
+
 			T = test_T;
 
 			// Keep track of last range entry to update this
@@ -421,6 +434,7 @@ renderCUDA(
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
 		invdepth[pix_id] = expected_invdepth;
+		out_opacity[pix_id] = 1 - T;
 	}
 
 	// max reduce the last contributor
@@ -449,7 +463,9 @@ void FORWARD::render(
 	const float* bg_color,
 	float* out_color,
 	float* depths,
-	float* depth)
+	float* depth,
+	float* out_opacity,
+	int* n_touched)
 {
 	renderCUDA<NUM_CHANNELS_3DGS> << <grid, block >> > (
 		ranges,
@@ -466,7 +482,9 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		depths,
-		depth);
+		depth,
+		out_opacity,
+		n_touched);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
