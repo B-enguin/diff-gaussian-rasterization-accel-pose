@@ -32,9 +32,10 @@ __device__ glm::vec3 computeColorFromSH(int idx, int deg, int max_coeffs, const 
 	glm::vec3 dir = pos - campos;
 	dir = dir / glm::length(dir);
 
-	glm::vec3* direct_color = ((glm::vec3*)dc) + idx;
+	// glm::vec3* direct_color = ((glm::vec3*)dc) + idx;
 	glm::vec3* sh = ((glm::vec3*)shs) + idx * max_coeffs;
-	glm::vec3 result = SH_C0 * direct_color[0];
+	// glm::vec3 result = SH_C0 * direct_color[0];
+	glm::vec3 result = SH_C0 * sh[0];
 
 	if (deg > 0)
 	{
@@ -411,7 +412,7 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
 
-			expected_invdepth += (1.f / depths[collected_id[j]]) * alpha * T;
+			expected_invdepth += (depths[collected_id[j]]) * alpha * T;
 
 			if (test_T > 0.5f) {
 				atomicAdd(&(n_touched[collected_id[j]]), 1);

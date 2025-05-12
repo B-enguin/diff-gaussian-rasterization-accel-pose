@@ -676,7 +676,7 @@ PerGaussianRenderCUDA(
 		con_o = conic_opacity[gaussian_idx];
 		for (int ch = 0; ch < C; ++ch)
 			c[ch] = colors[gaussian_idx * C + ch];
-		invd = 1.f / depths[gaussian_idx];
+		invd = depths[gaussian_idx];
 	}
 
 	// Gradient accumulation variables
@@ -811,7 +811,7 @@ PerGaussianRenderCUDA(
 		for (int ch = 0; ch < C; ++ch) {
 			atomicAdd(&dL_dcolors[gaussian_idx * C + ch], Register_dL_dcolors[ch]);
 		}
-		atomicAdd(&dL_dinvdepths[gaussian_idx], 1.0f / Register_dL_dinvdepths);
+		atomicAdd(&dL_dinvdepths[gaussian_idx], Register_dL_dinvdepths);
 	}
 }
 
