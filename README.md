@@ -1,6 +1,6 @@
 # Differential Gaussian Rasterization
 
-This paper combines the accelerated rasterization engine for the paper "3D Gaussian Splatting for Real-Time Rendering of Radiance Fields" with the one used in the paper for "[Gaussian Splatting SLAM](https://github.com/rmurai0610/diff-gaussian-rasterization-w-pose)" 
+This repo combines the accelerated rasterization engine for the paper "3D Gaussian Splatting for Real-Time Rendering of Radiance Fields" with the one used in the paper for "[Gaussian Splatting SLAM](https://github.com/rmurai0610/diff-gaussian-rasterization-w-pose)" 
 
 If you can make use of it in your own research, please be so kind to cite both papers.
 
